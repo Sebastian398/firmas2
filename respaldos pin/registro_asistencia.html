@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>REGISTRO DE ASISTENCIA</title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<link rel="preconnect" href="https://cdn.socket.io">
+<style>
+@page { size: Letter portrait; margin: 10mm 8mm; }
+:root{ --page-width: 198.5mm; --fit-scale: .983; }
+html, body { height: 100%; }
+body { margin: 0; font-family: "Segoe UI", Arial, Helvetica, sans-serif; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: var(--page-width); margin: 0 auto; box-sizing: border-box; border: 1px solid #000; background: #fff; }
+/* Tablas */
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { border: 1px solid #000; padding: 2px; font-size: 11px; line-height: 1.2; vertical-align: middle; }
+.center { text-align: center; }
+.block { break-inside: avoid; }
+/* Encabezado */
+.head th, .head td { padding: 4px; }
+.logo { height: 15mm; position: relative; }
+.logo .box { height: 100%; display: flex; align-items: center; justify-content: flex-start; }
+.logo img { max-height: 100%; max-width: 100%; object-fit: contain; display: block; }
+.logo-uploader { position: absolute; left: 0; bottom: 2px; background: #fff; padding: 2px 4px; border: 1px dashed #999; font-size: 10px; }
+.title { text-align: center; font-weight: 700; font-size: 10.6px; }
+.meta-label { width: 22mm; font-weight: 600; }
+.meta-value { width: 35mm; text-align: right; font-weight: 600; }
+/* Info */
+.label { width: 18mm; font-weight: 600; }
+.label-small { width: 14mm; font-weight: 600; }
+.h-9mm { height: 8.2mm; }
+.h-11mm { height: 9.0mm; }
+/* Categorías */
+.cats th { text-align: center; font-weight: 600; }
+.cat-cell { position: relative; padding-left: 12mm; font-weight: 600; text-align: center; }
+.cat-cell.no-check { padding-left: 0; text-align: center; }
+.check { width: 4.4mm; height: 4.4mm; border: 1px solid #000; background: #fff; display: inline-block; position: absolute; left: 4mm; top: 50%; transform: translateY(-50%); cursor: pointer; user-select: none; }
+.check::after { pointer-events: none; }
+.check.checked::after { content: "X"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 8.4px; color: #000; }
+/* Tabla asistentes */
+.att thead th { text-align: center; font-weight: 700; padding-top: 1px; padding-bottom: 1px; }
+.att tbody td { height: 6.2mm; }
+.col-n { width: 6.5%; text-align: center; }
+.col-nombre { width: 36%; }
+.col-cc { width: 17%; }
+.col-cargo { width: 25%; }
+.col-firma { width: 15.5%; }
+/* Inputs */
+.cell-input, .inline-input, .line-textarea, select.cargo { width: 100%; border: none; outline: none; font: inherit; background: transparent; box-sizing: border-box; }
+.cell-input { padding: 0 2px; }
+.inline-input { padding: 0 2px; }
+.line-textarea { padding: 0 2px; resize: none; height: 7.8mm; }
+/* Dropdown cargo */
+select.cargo { padding: 0 2px; background: transparent; text-transform: uppercase; -webkit-appearance: auto; -moz-appearance: auto; appearance: auto; }
+.print-cargo { display: none; font-size: 10.6px; text-transform: uppercase; }
+/* Firma */
+.firma-wrap { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.firma-img { max-height: 6.8mm; max-width: 100%; width: auto; height: auto; display: block; border: none; cursor: pointer; }
+#firma-lider, #firma-lider2 { max-height: 7.0mm; }
+.btn-firmar { font-size: 10px; padding: 2px 6px; cursor: pointer; }
+.foot-sign .btn-firmar { font-size: 9px; padding: 1px 5px; }
+/* Observaciones */
+.obs-label { width: 28mm; font-weight: 600; }
+.obs-text { height: 10.5mm; }
+/* Pie y ámbito */
+.foot-small { width: 16mm; font-weight: 600; text-align: center; }
+.foot-sign { width: 40mm; }
+.foot-row { height: 12mm; }
+.foot-ambito { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; row-gap: 5px; padding: 2px 2px; overflow: hidden; }
+.foot-ambito .row { display: grid; grid-template-columns: 1fr auto; align-items: center; column-gap: 3px; }
+.ambito-label { font-weight: 600; font-size: 10.5px; }
+.foot-ambito .check { position: relative; left: auto; top: auto; transform: none; width: 4.0mm; height: 5.0mm; }
+/* Contenedores líderes */
+.lideres-wrap { display: flex; align-items: flex-start; gap: 6px; }
+.fix-label { font-weight: 600; white-space: nowrap; font-size: 10.3px; }
+.lideres-nombres { display: grid; grid-template-columns: 1fr; row-gap: 3px; }
+.lideres-nombres .row { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 6px; }
+lideres-nombres input.inline-input { font-size: 10.3px; }
+/* Firmas líderes: 1 o 2 */
+.lideres-firmas { display: grid; grid-template-columns: 1fr; align-items: center; justify-items: center; column-gap: 4px; }
+.foot-sign.two-leaders .lideres-firmas { grid-template-columns: 1fr 1fr; }
+.lider-slot { display:flex; align-items:center; gap:4px; width: 100%; justify-content:center; }
+.foot-sign.two-leaders .firma-img { max-height: 6.0mm; }
+/* Anti-huérfanos */
+.head, #tabla-info, .cats, .att, .foot, .block { page-break-inside: avoid; break-inside: avoid; page-break-after: avoid; }
+/* Pantalla/impresión selectores de fecha */
+.only-print{ display:none; }
+.only-screen{ display:inline; }
+@media print {
+  .page{ width: calc(var(--page-width) / var(--fit-scale)); transform: scale(var(--fit-scale)); transform-origin: top left; margin: 0 auto; }
+  .logo-uploader { display: none !important; }
+  input::placeholder, textarea::placeholder { color: transparent !important; }
+  img.firma-img[src=""], img.firma-img:not([src]) { display: none !important; }
+  select.cargo { display: none !important; }
+  .print-cargo { display: inline-block !important; }
+  table, tr, td, th, .block { page-break-inside: avoid; break-inside: avoid; }
+  .btn-firmar, .btn-add-leader, .btn-remove-leader, .toolbar, .logo-uploader, .modal, .modal * { display: none !important; }
+  .only-screen{ display:none !important; }
+  .only-print{ display:inline !important; }
+}
+.pdf-export .page{ width: calc(var(--page-width) / var(--fit-scale)); transform: scale(var(--fit-scale)); transform-origin: top left; margin: 0 auto; }
+.pdf-export .logo-uploader { display: none !important; }
+.pdf-export input::placeholder, .pdf-export textarea::placeholder { color: transparent !important; }
+.pdf-export img.firma-img[src=""], .pdf-export img.firma-img:not([src]) { display: none !important; }
+.pdf-export select.cargo { display: none !important; }
+.pdf-export .print-cargo { display: inline-block !important; }
+.pdf-export table, .pdf-export tr, .pdf-export td, .pdf-export th, .pdf-export .block { page-break-inside: avoid; break-inside: avoid; }
+.pdf-export .btn-firmar, .pdf-export .btn-add-leader, .pdf-export .btn-remove-leader, .pdf-export .toolbar, .pdf-export .logo-uploader, .pdf-export .modal, .pdf-export .modal * { display: none !important; }
+.pdf-export .only-screen{ display:none !important; }
+.pdf-export .only-print{ display:inline !important; }
+/* Modal firma */
+.modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; z-index: 10; }
+.modal { background: #fff; border: 1px solid #333; padding: 12px; width: min(92vw, 640px); }
+.modal h3 { margin: 0 0 8px 0; font-size: 16px; }
+.pad { border: 1px solid #000; width: 600px; height: 190px; background: #fff; touch-action: none; }
+.modal .actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.modal button, .modal label { padding: 6px 10px; font-size: 12px; cursor: pointer; }
+.modal .right { margin-left: auto; }
+@media (max-width: 700px) { .pad { width: 92vw; height: 170px; } }
+/* Indicadores de bloqueo/edición */
+.editing-remote { outline: 2px solid #f5c542; background: #fffbe6; }
+.editing-self { outline: 2px solid #4caf50; background: #f0fff4; }
+.locked-remote { cursor: not-allowed; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+ <div class="page">
+  <table class="head block">
+   <colgroup>
+    <col style="width: 30%;"><col><col style="width: 22mm;"><col style="width: 35mm;">
+   </colgroup>
+   <tr>
+    <td class="logo" rowspan="4">
+     <div class="box"><img id="logo-img" alt="" /></div>
+     <label class="logo-uploader">Cargar logo
+      <input id="logo-file" type="file" accept="image/*" style="display:none;">
+     </label>
+    </td>
+    <td class="title" rowspan="4">REGISTRO DE ASISTENCIA</td>
+    <td class="meta-label">CÓDIGO</td>
+    <td class="meta-value" id="meta-codigo">SGI-FO-02</td>
+   </tr>
+   <tr><td class="meta-label">VERSIÓN</td><td class="meta-value" id="meta-version">3</td></tr>
+   <tr><td class="meta-label">FECHA</td><td class="meta-value" id="meta-fecha">26/02/2024</td></tr>
+   <tr><td class="meta-label">PÁGINA</td><td class="meta-value">1 DE 1</td></tr>
+  </table>
+
+  <table class="block" id="tabla-info">
+   <colgroup>
+    <col style="width:18mm;"><col><col style="width:14mm;"><col style="width:38mm;">
+   </colgroup>
+   <tr class="h-9mm">
+    <th class="label">Fecha</th>
+    <td class="center">
+      <span class="only-screen">
+        <select id="fecha-dia" aria-label="Día"></select>
+        <select id="fecha-mes" aria-label="Mes"></select>
+        <select id="fecha-anio" aria-label="Año"></select>
+      </span>
+      <span id="fecha-texto" class="only-print"></span>
+    </td>
+    <th class="label-small">Hora</th>
+    <td><input id="hora" class="inline-input" type="time" step="60" aria-label="Hora"/></td>
+   </tr>
+   <tr class="h-11mm"><th class="label">Objetivo</th><td colspan="3"><textarea id="objetivo" class="line-textarea" placeholder="Escriba aquí el objetivo..."></textarea></td></tr>
+   <tr class="h-11mm"><th class="label">Tema (s)</th><td colspan="3"><textarea id="temas" class="line-textarea" placeholder="Escriba aquí el/los tema(s)..."></textarea></td></tr>
+  </table>
+
+  <table class="cats block">
+   <colgroup>
+    <col style="width:16%;"><col style="width:16%;"><col style="width:16%;"><col style="width:16%;"><col style="width:10%;"><col>
+   </colgroup>
+   <tr class="h-9mm">
+    <td class="cat-cell"><span class="check" data-group="categorias" data-id="reunion"></span>Reunión</td>
+    <td class="cat-cell"><span class="check" data-group="categorias" data-id="capacitacion"></span>Capacitación</td>
+    <td class="cat-cell"><span class="check" data-group="categorias" data-id="socializacion"></span>Socialización</td>
+    <td class="cat-cell"><span class="check" data-group="categorias" data-id="otro"></span>Otro</td>
+    <td class="cat-cell no-check center">¿Cuál?</td>
+    <td><input id="cual" class="inline-input" type="text" placeholder="Especifique" /></td>
+   </tr>
+  </table>
+
+  <table class="att block" id="tabla-asistentes">
+   <thead>
+    <tr>
+     <th class="col-n">N°</th>
+     <th class="col-nombre">Nombre y Apellido</th>
+     <th class="col-cc">Número de cédula</th>
+     <th class="col-cargo">Cargo</th>
+     <th class="col-firma">Firma</th>
+    </tr>
+   </thead>
+   <tbody></tbody>
+  </table>
+
+  <table class="block">
+   <tr>
+    <th class="obs-label">Observaciones:</th>
+    <td><textarea id="observaciones" class="line-textarea obs-text" placeholder="Escriba aquí las observaciones..."></textarea></td>
+   </tr>
+  </table>
+
+  <table class="block foot">
+   <colgroup><col><col style="width:22mm;"><col style="width:16mm;"><col style="width:40mm;"></colgroup>
+   <tr class="foot-row">
+    <td>
+     <div class="lideres-wrap">
+      <span class="fix-label">Nombre de la persona que lidera la actividad:</span>
+      <div class="lideres-nombres">
+        <div class="row">
+          <span id="lbl-lider1" style="font-weight:600; white-space:nowrap; display:none;">Líder #1:</span>
+          <input id="lider-nombre" class="inline-input" type="text" placeholder="Nombre del líder" />
+        </div>
+        <div class="row" id="row-lider2" style="display:none;">
+          <span id="lbl-lider2" style="font-weight:600; white-space:nowrap;">Líder #2:</span>
+          <input id="lider2-nombre" class="inline-input" type="text" placeholder="Nombre del líder" />
+        </div>
+      </div>
+     </div>
+    </td>
+    <td class="foot-ambito">
+      <div class="row"><span class="ambito-label">INTERNO</span><span class="check" data-group="ambito" data-id="interno"></span></div>
+      <div class="row"><span class="ambito-label">EXTERNO</span><span class="check" data-group="ambito" data-id="externo"></span></div>
+    </td>
+    <th class="foot-small" style="text-align:center;">Firma:</th>
+    <td class="foot-sign" id="foot-sign">
+      <div class="lideres-firmas">
+        <div class="lider-slot">
+          <img id="firma-lider" class="firma-img" alt="" data-target="lider" />
+          <button class="btn-firmar" data-target="lider">Firmar</button>
+        </div>
+        <div class="lider-slot" id="slot-lider2" style="display:none;">
+          <img id="firma-lider2" class="firma-img" alt="" data-target="lider2" />
+          <button class="btn-firmar" data-target="lider2">Firmar</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px; justify-content:center; margin-top:2px;">
+        <button id="btn-add-leader" class="btn-add-leader" title="Añadir 2° líder">+ Líder</button>
+        <button id="btn-remove-leader" class="btn-remove-leader" title="Quitar 2° líder" style="display:none;">– Quitar</button>
+      </div>
+    </td>
+   </tr>
+  </table>
+
+  <div class="toolbar" style="border-top:1px solid #ccc;">
+    <button id="btn-save">Guardar PDF</button>
+    <button id="btn-clear">Limpiar datos</button>
+  </div>
+ </div>
+
+ <!-- Modal de firma -->
+ <div class="modal-bg" id="sig-modal">
+  <div class="modal">
+   <h3>Firmar</h3>
+   <canvas id="sig-pad" class="pad"></canvas>
+   <div class="actions">
+    <button id="sig-draw" title="Dibujar firma">Dibujar</button>
+    <label for="sig-upload">Cargar imagen</label>
+    <input id="sig-upload" type="file" accept="image/*" style="display:none" />
+    <button id="sig-delete" class="right">Borrar firma</button>
+    <button id="sig-cancel">Cancelar</button>
+    <button id="sig-save">Guardar firma</button>
+   </div>
+  </div>
+ </div>
+
+ <!-- Modal de PIN admin -->
+ <div class="modal-bg" id="pin-modal">
+  <div class="modal" style="max-width:320px">
+   <h3>Autorización Administrador</h3>
+   <input id="pin-input" type="password" placeholder="Ingrese PIN" style="width:100%;padding:6px">
+   <div class="actions">
+    <button id="pin-cancel">Cancelar</button>
+    <button id="pin-ok" class="right">Autorizar</button>
+   </div>
+   <p id="pin-error" style="color:red;display:none">PIN incorrecto</p>
+  </div>
+ </div>
+
+<script>
+/* ====== Utilidades ====== */
+const STORAGE_KEY = 'registroAsistencia_v13_logoMeta_v10';
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+/* ====== Encabezado a partir del logo ====== */
+const HEADER_PROFILES = { EMPRESA1:{codigo:'SGI-FO-01',version:'1',fecha:'26/02/2024'}, EMPRESA2:{codigo:'SGI-FO-02',version:'2',fecha:'26/02/2024'}, EMPRESA3:{codigo:'SGI-FO-03',version:'3',fecha:'26/02/2024'} };
+function setHeaderMeta(meta={}){ if(meta.codigo) $('#meta-codigo').textContent=meta.codigo; if(meta.version) $('#meta-version').textContent=meta.version; if(meta.fecha) $('#meta-fecha').textContent=meta.fecha; }
+function parseHeaderFromLogo(file){ const name=file?.name??''; const lname=name.toLowerCase(); let brand=null; if(lname.includes('empresa1')) brand='EMPRESA1'; else if(lname.includes('empresa2')) brand='EMPRESA2'; else if(lname.includes('empresa3')) brand='EMPRESA3'; let codigo=null,version=null,fecha=null; const mCode=name.match(/([A-Z]{2,}-FO-\d{2,})/i); if(mCode) codigo=mCode[1].toUpperCase(); const mVer=name.match(/(?:^[\W_])v(?:er(?:sion)?)?[\W_]?([0-9]{1,2})(?=\b[\W_])/i); if(mVer) version=String(parseInt(mVer[1],10)); if(!fecha && file?.lastModified){ try{ const d=new Date(file.lastModified); const fmt=new Intl.DateTimeFormat('es-CO',{day:'2-digit',month:'2-digit',year:'numeric'}); fecha=fmt.format(d);}catch(e){} } if(brand&&HEADER_PROFILES[brand]){ const prof=HEADER_PROFILES[brand]; codigo=codigo??prof.codigo; version=version??prof.version; fecha=fecha??prof.fecha; } return {codigo,version,fecha}; }
+const fileInput=$('#logo-file'); const logoImg=$('#logo-img');
+fileInput?.addEventListener('change',()=>{
+  const f=fileInput.files&&fileInput.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ logoImg.src=e.target.result; save(); window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/logo',value:logoImg.src}})); };
+  r.readAsDataURL(f);
+  const header=parseHeaderFromLogo(f);
+  setHeaderMeta(header); save();
+  if(header){
+    if(header.codigo) window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/codigo',value:header.codigo}}));
+    if(header.version) window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/version',value:header.version}}));
+    if(header.fecha) window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/fecha',value:header.fecha}}));
+  }
+});
+/* ====== Fecha ====== */
+function initFechaSelects(){ const d=$('#fecha-dia'), m=$('#fecha-mes'), a=$('#fecha-anio'); if(!d||!m||!a) return; d.innerHTML='<option value="">Día</option>'; m.innerHTML='<option value="">Mes</option>'; a.innerHTML='<option value="">Año</option>'; for(let i=1;i<=31;i++) d.innerHTML+=`<option value="${String(i).padStart(2,'0')}">${i}</option>`; for(let i=1;i<=12;i++) m.innerHTML+=`<option value="${String(i).padStart(2,'0')}">${i}</option>`; const year=new Date().getFullYear(); for(let i=year-5;i<=year+1;i++) a.innerHTML+=`<option value="${i}">${i}</option>`; [d,m,a].forEach(el=> el.addEventListener('change',()=>{ updateFechaTexto(); save(); })); }
+function updateFechaTexto(){ const d=$('#fecha-dia')?.value??''; const m=$('#fecha-mes')?.value??''; const a=$('#fecha-anio')?.value??''; const span=$('#fecha-texto'); if(span){ span.textContent=(d&&m&&a)?`${d}/${m}/${a}`:''; } }
+/* ====== Hora ====== */
+const horaInp=$('#hora'); function formatHour(v){ v=(v??'').toLowerCase().replace(/[^\d:amp\s]/g,''); if(/^\d{3,}/.test(v)&&v.indexOf(':')===-1) v=v.replace(/^(\d{2})(\d+)/,'$1:$2'); v=v.replace(/(:\d{2})(am|pm)/,'$1 $2'); return v.slice(0,8);} function isValidHour(v){ return /^((0[1-9]|1[0-2])):[0-5]\d\s?(am|pm)$/.test((v??'').toLowerCase()); }
+horaInp?.addEventListener('input',()=>{ horaInp.value=formatHour(horaInp.value); save(); });
+/* ====== Cargos y filas ====== */
+const rolesOriginal=['COORDINADORA DE RECURSOS HUMANOS','GERENTE GENERAL','AUXILIAR DE BODEGA MONTACARGUISTA','ANALISTA DE OPERACIONES Y SERVICIO AL CLIENTE','COORDINADOR HSEQ','JEFE DE CONTABILIDAD','AUXILIAR DE RECURSO HUMANO','AUXILIAR CONTABLE Y ADMINISTRATIVO','SUPERVISOR DE BODEGA','APRENDIZ SENA','AUXILIAR DE OPERACIONES','AUXILIAR DE SERVICIOS GENERALES Y ASEO','COORDINADORA DE OPERACIONES','DIRECTOR DE OPERACIONES','OFICIAL DE CUMPLIMIENTO','ASESOR DE PROYECTOS E INNOVACIÓN','CONDUCTOR','DIRECTORA DE COMPRAS','OTRO'];
+const seen=new Set(); const rolesUnicos=rolesOriginal.filter(r=>{const k=r.trim().toUpperCase(); if(seen.has(k)) return false; seen.add(k); return true;}); function abreviarRol(s){ return s.replace(/^\s*ANALISTA\b/i,'ANAL.').replace(/^\s*AUXILIAR\b/i,'AUX.').replace(/^\s*COORDINADOR(A)?\b/i,'COORD.'); } const cargos=rolesUnicos.map(abreviarRol).map(t=>t.toUpperCase());
+const tbody=$('#tabla-asistentes tbody'); function makeCargoSelect(){ const wrap=document.createElement('div'); wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.justifyContent='space-between'; wrap.style.gap='6px'; const sel=document.createElement('select'); sel.className='cargo'; const empty=document.createElement('option'); empty.value=''; empty.textContent=''; sel.appendChild(empty); cargos.forEach(c=>{const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o);}); sel.addEventListener('change',()=>{ const span=wrap.querySelector('.print-cargo'); span.textContent=sel.options[sel.selectedIndex]?.text??''; save(); }); const spanPrint=document.createElement('span'); spanPrint.className='print-cargo'; spanPrint.textContent=''; wrap.append(sel, spanPrint); return wrap; }
+function keepDigitsMax(el,max){ el.value=(el.value??'').replace(/\D+/g,'').slice(0,max); }
+/* ====== Firmas ====== */
+
+function isImgEmpty(img){if(!img) return true;
+    const attr = img.getAttribute('src');
+    if(attr === null) return true;
+    const src = attr.trim();
+    if(src === '') return true;
+    if(src === 'about:blank') return true;
+    if(src === window.location.href) return true;
+    if(src.startsWith('data:image/')) return false;
+    return false;}
+function toggleSignButton(imgEl,btnEl){ const has=imgEl && !isImgEmpty(imgEl); if(btnEl) btnEl.style.display= has? 'none' : 'inline-block'; }
+function syncSignButtons(){ const leaderImg=$('#firma-lider'); const leaderBtn=document.querySelector('.btn-firmar[data-target="lider"]'); if(leaderImg&&leaderBtn) toggleSignButton(leaderImg, leaderBtn); const leader2Img=$('#firma-lider2'); const leader2Btn=document.querySelector('.btn-firmar[data-target="lider2"]'); if(leader2Img&&leader2Btn) toggleSignButton(leader2Img, leader2Btn); $$('#tabla-asistentes tbody tr').forEach(tr=>{ const img=tr.querySelector('img.firma-img'); const btn=tr.querySelector('button.btn-firmar'); if(img&&btn) toggleSignButton(img, btn); }); }
+function ensureSignatureControls(){ const slot1=document.querySelector('.lideres-firmas .lider-slot'); if(slot1){ let img1=slot1.querySelector('img.firma-img[data-target="lider"]')||document.getElementById('firma-lider'); if(!img1){ img1=document.createElement('img'); img1.id='firma-lider'; img1.className='firma-img'; img1.dataset.target='lider'; img1.alt=''; slot1.prepend(img1);} let btn1=slot1.querySelector('button.btn-firmar[data-target="lider"]'); if(!btn1){ btn1=document.createElement('button'); btn1.className='btn-firmar'; btn1.dataset.target='lider'; btn1.textContent='Firmar'; slot1.appendChild(btn1);} img1.removeEventListener('click', openSignature); img1.addEventListener('click', openSignature); btn1.removeEventListener('click', openSignature); btn1.addEventListener('click', openSignature);} const slot2=document.getElementById('slot-lider2'); if(slot2){ let img2=slot2.querySelector('img.firma-img[data-target="lider2"]')||document.getElementById('firma-lider2'); if(!img2){ img2=document.createElement('img'); img2.id='firma-lider2'; img2.className='firma-img'; img2.dataset.target='lider2'; img2.alt=''; slot2.prepend(img2);} let btn2=slot2.querySelector('button.btn-firmar[data-target="lider2"]'); if(!btn2){ btn2=document.createElement('button'); btn2.className='btn-firmar'; btn2.dataset.target='lider2'; btn2.textContent='Firmar'; slot2.appendChild(btn2);} img2.removeEventListener('click', openSignature); img2.addEventListener('click', openSignature); btn2.removeEventListener('click', openSignature); btn2.addEventListener('click', openSignature);} const rows=Array.from(document.querySelectorAll('#tabla-asistentes tbody tr')); rows.forEach((tr,idx)=>{ const tdFirma=tr.children[4]; if(!tdFirma) return; let wrap=tdFirma.querySelector('.firma-wrap'); if(!wrap){ wrap=document.createElement('div'); wrap.className='firma-wrap'; tdFirma.textContent=''; tdFirma.appendChild(wrap);} let img=wrap.querySelector('img.firma-img'); if(!img){ img=document.createElement('img'); img.className='firma-img'; img.alt=''; img.id=`firma-${idx+1}`; img.dataset.target=`p-${idx+1}`; wrap.prepend(img);} let btn=wrap.querySelector('button.btn-firmar'); if(!btn){ btn=document.createElement('button'); btn.className='btn-firmar'; btn.textContent='Firmar'; btn.dataset.target=`p-${idx+1}`; wrap.appendChild(btn);} img.removeEventListener('click', openSignature); img.addEventListener('click', openSignature); btn.removeEventListener('click', openSignature); btn.addEventListener('click', openSignature); }); syncSignButtons(); }
+function makeRow(i){ const tr=document.createElement('tr'); const tdN=document.createElement('td'); tdN.className='col-n'; tdN.textContent=i; const tdNombre=document.createElement('td'); const inpNombre=document.createElement('input'); inpNombre.type='text'; inpNombre.placeholder='Nombre y Apellido'; inpNombre.className='cell-input'; inpNombre.setAttribute('aria-label',`Nombre fila ${i}`); inpNombre.addEventListener('input', save); tdNombre.appendChild(inpNombre); const tdCC=document.createElement('td'); const inpCC=document.createElement('input'); inpCC.type='text'; inpCC.inputMode='numeric'; inpCC.maxLength=10; inpCC.placeholder='Cédula (6–10 dígitos)'; inpCC.className='cell-input'; inpCC.setAttribute('aria-label',`Cédula fila ${i}`); inpCC.addEventListener('input',()=>{ keepDigitsMax(inpCC,10); save(); }); inpCC.addEventListener('paste',e=>{ e.preventDefault(); const text=(e.clipboardData??window.clipboardData).getData('text')??''; const clean=text.replace(/\D+/g,'').slice(0,10); document.execCommand('insertText', false, clean);}); tdCC.appendChild(inpCC); const tdCargo=document.createElement('td'); tdCargo.appendChild(makeCargoSelect()); const tdFirma=document.createElement('td'); const wrap=document.createElement('div'); wrap.className='firma-wrap'; const img=document.createElement('img'); img.className='firma-img'; img.alt=''; img.id=`firma-${i}`; img.dataset.target=`p-${i}`; const btn=document.createElement('button'); btn.className='btn-firmar'; btn.textContent='Firmar'; btn.dataset.target=`p-${i}`; btn.addEventListener('click', openSignature); img.addEventListener('click', openSignature); wrap.append(img,btn); tdFirma.appendChild(wrap); tr.append(tdN,tdNombre,tdCC,tdCargo,tdFirma); return tr; }
+for(let i=1;i<=20;i++) tbody.appendChild(makeRow(i));
+/* ====== Checks categorías y campo "cual" ====== */
+const catChecks=$$('.check[data-group="categorias"]');
+function syncCual(){ const otro=$('.check[data-group="categorias"][data-id="otro"]'); const cual=$('#cual'); const activo=!!otro && otro.classList.contains('checked'); const was=cual.value; cual.disabled=!activo; if(!activo){ if(was!==''){ cual.value=''; save(); window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/cual', value:''}})); } } }
+catChecks.forEach(el=>{ el.addEventListener('click',()=>{ catChecks.forEach(c=>c.classList.remove('checked')); el.classList.add('checked'); syncCual(); save(); }); });
+const ambito=$$('.check[data-group="ambito"]'); ambito.forEach(el=>{ el.addEventListener('click',()=>{ ambito.forEach(a=>a.classList.remove('checked')); el.classList.add('checked'); save(); }); });
+['objetivo','temas','cual','observaciones','lider-nombre','lider2-nombre'].forEach(id=>{ const el=document.getElementById(id); el && el.addEventListener('input', save); });
+// Líder 2 toggles
+const rowLider2=$('#row-lider2'); const slotLider2=$('#slot-lider2'); const btnAddLeader=$('#btn-add-leader'); const btnRemoveLeader=$('#btn-remove-leader'); const footSign=document.getElementById('foot-sign'); const lblLider1=$('#lbl-lider1');
+function showLeader2(on){ rowLider2.style.display= on? '' : 'none'; slotLider2.style.display= on? 'flex' : 'none'; btnAddLeader.style.display= on? 'none' : ''; btnRemoveLeader.style.display= on? '' : 'none'; footSign?.classList.toggle('two-leaders', !!on); if(lblLider1){ lblLider1.style.display= on? 'inline-block':'none'; } save(); }
+btnAddLeader?.addEventListener('click',()=> showLeader2(true)); btnRemoveLeader?.addEventListener('click',()=>{ const n2=$('#lider2-nombre'); if(n2) n2.value=''; const f2=$('#firma-lider2'); if(f2) f2.src=''; showLeader2(false); syncSignButtons(); save(); window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/leaders/leader2/firma', value:''}})); });
+/* ====== Modal firma ====== */
+const modal=$('#sig-modal'); const pad=$('#sig-pad'); const ctx=pad.getContext('2d'); let drawing=false,last=null,targetId=null; let pendingAction={type:'none'};
+function resizePad(){ const rect=pad.getBoundingClientRect(); const ratio=window.devicePixelRatio??1; pad.width=Math.round(rect.width*ratio); pad.height=Math.round(rect.height*ratio); ctx.setTransform(1,0,0,1,0,0); ctx.scale(ratio,ratio); ctx.fillStyle='#fff'; ctx.fillRect(0,0,rect.width,rect.height); ctx.lineWidth=3; ctx.lineCap='round'; ctx.strokeStyle='#000'; }
+function drawImageFit(img){ const cw=pad.getBoundingClientRect().width; const ch=pad.getBoundingClientRect().height; ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch); const iw=img.width; const ih=img.height; const scale=Math.min(cw/iw, ch/ih); const nw=iw*scale; const nh=ih*scale; const dx=(cw-nw)/2; const dy=(ch-nh)/2; ctx.drawImage(img,dx,dy,nw,nh); }
+function getPos(e){ const r=pad.getBoundingClientRect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x,y}; }
+function start(e){ drawing=true; last=getPos(e); pendingAction.type='image'; }
+function move(e){ if(!drawing) return; const p=getPos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; }
+function end(){ drawing=false; }
+pad.addEventListener('mousedown',start); pad.addEventListener('mousemove',move); window.addEventListener('mouseup',end); pad.addEventListener('touchstart',e=>{e.preventDefault();start(e);}); pad.addEventListener('touchmove',e=>{e.preventDefault();move(e);}); pad.addEventListener('touchend',e=>{e.preventDefault();end(e);});
+function preloadExistingSignatureIntoCanvas(){ let imgEl=null; if(targetId==='lider') imgEl=$('#firma-lider'); else if(targetId==='lider2') imgEl=$('#firma-lider2'); else if(targetId && targetId.startsWith('p-')){ const idx=targetId.split('-')[1]; imgEl=document.getElementById(`firma-${idx}`);} resizePad(); if(imgEl&&imgEl.src){ const temp=new Image(); temp.onload=()=>{ drawImageFit(temp); }; temp.src=imgEl.src; } }
+function openSignature(e){ targetId=e.currentTarget.dataset.target; pendingAction={type:'none'}; const up=$('#sig-upload'); if(up) up.value=''; modal.style.display='flex'; setTimeout(preloadExistingSignatureIntoCanvas,40); }
+const btnLider=document.querySelector('.btn-firmar[data-target="lider"]'); if(btnLider) btnLider.addEventListener('click', openSignature); const imgLider=document.querySelector('#firma-lider'); imgLider && imgLider.addEventListener('click', openSignature); const btnLider2=document.querySelector('.btn-firmar[data-target="lider2"]'); if(btnLider2) btnLider2.addEventListener('click', openSignature); const imgLider2=document.querySelector('#firma-lider2'); imgLider2 && imgLider2.addEventListener('click', openSignature);
+$('#sig-draw').addEventListener('click',()=>{ resizePad(); pendingAction.type='image'; }); $('#sig-cancel').addEventListener('click',()=>{ modal.style.display='none'; pendingAction={type:'none'}; }); $('#sig-upload').addEventListener('change',()=>{ const f=$('#sig-upload').files && $('#sig-upload').files[0]; if(!f) return; const r=new FileReader(); r.onload=e=>{ const img=new Image(); img.onload=()=>{ resizePad(); drawImageFit(img); pendingAction.type='image'; }; img.src=e.target.result; }; r.readAsDataURL(f); $('#sig-upload').value=''; }); $('#sig-delete').addEventListener('click',()=>{ resizePad(); pendingAction.type='delete'; });
+$('#sig-save').addEventListener('click',()=>{ let changedPath=null, newVal=''; const apply=(imgEl)=>{ if(!imgEl) return; if(pendingAction.type==='delete'){ imgEl.src=''; } else if(pendingAction.type==='image'){ imgEl.src=pad.toDataURL('image/png'); } newVal=imgEl.src??''; }; if(targetId==='lider'){ apply($('#firma-lider')); changedPath='/leaders/leader1/firma'; } else if(targetId==='lider2'){ apply($('#firma-lider2')); changedPath='/leaders/leader2/firma'; } else if(targetId&&targetId.startsWith('p-')){ const idx=targetId.split('-')[1]; const img=document.getElementById(`firma-${idx}`); if(img) apply(img); const k=`row_${String(idx).padStart(2,'0')}`; changedPath=`/participants/${k}/firma`; } modal.style.display='none'; pendingAction={type:'none'}; syncSignButtons(); save(); if(changedPath){ window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:changedPath,value:newVal}})); } });
+/* ====== Validación / persistencia / export ====== */
+function validar(){ const errs=[]; const fd=$('#fecha-dia')?.value; const fm=$('#fecha-mes')?.value; const fa=$('#fecha-anio')?.value; if(!fd||!fm||!fa) errs.push('La fecha es obligatoria.'); const hv=(horaInp?.value??'').trim(); if(!hv) errs.push('La Hora es obligatoria.'); const obj=($('#objetivo')?.value??'').trim(); if(!obj) errs.push('El Objetivo es obligatorio.'); const tem=($('#temas')?.value??'').trim(); if(!tem) errs.push('El Tema es obligatorio.'); const liderNombre=($('#lider-nombre')?.value??'').trim(); if(!liderNombre) errs.push('La persona que lidera la actividad es obligatoria.'); const liderSignImg=$('#firma-lider'); const liderSign=(liderSignImg && !isImgEmpty(liderSignImg)); if(!liderSign) errs.push('La firma del líder es obligatoria.'); const logo=($('#logo-img')?.src??'').trim(); if(!logo) errs.push('Debe cargar el logo antes de guardar.'); const anyCat=$$('.check[data-group="categorias"]').some(el=>el.classList.contains('checked')); if(!anyCat) errs.push('Debe seleccionar una categoría (Reunión, Capacitación, Socialización u Otro).'); const anyAmb=$$('.check[data-group="ambito"]').some(el=>el.classList.contains('checked')); if(!anyAmb) errs.push('Debe seleccionar el ámbito (Interno o Externo).'); const rows=$$('#tabla-asistentes tbody tr'); rows.forEach((tr,i)=>{ const [n,nom,cc,cargo,firma]=tr.children; const nombre=(nom.querySelector('input')?.value??'').trim(); const ced=(cc.querySelector('input')?.value??'').trim(); const sel=cargo.querySelector('select'); const cval=(sel?.value??'').trim(); const img=firma.querySelector('img'); const has=(img && !isImgEmpty(img)); const vacio=(nombre===''&&ced===''&&cval===''&&!has); if(!vacio){ const falt=[]; if(!nombre) falt.push('Nombre y Apellido'); if(!ced) falt.push('Cédula'); if(ced && !/^\d{6,10}$/.test(ced)) falt.push('Cédula (6–10 dígitos)'); if(!cval) falt.push('Cargo'); if(!has) falt.push('Firma'); if(falt.length) errs.push(`Fila ${i+1}: si diligencia un campo, debe completar ${falt.join(', ')}.`); } }); const l2vis=$('#row-lider2').style.display!=='none'; if(l2vis){ const n2=($('#lider2-nombre')?.value??'').trim(); const i2=$('#firma-lider2'); const f2=(i2 && !isImgEmpty(i2)); if(!n2) errs.push('El nombre del 2° líder es obligatorio.'); if(!f2) errs.push('La firma del 2° líder es obligatoria.'); } return errs; }
+function snapshot(){ const data={}; data.meta={codigo:$('#meta-codigo')?.textContent??'',version:$('#meta-version')?.textContent??'',fecha:$('#meta-fecha')?.textContent??''}; data.fechaDia=$('#fecha-dia')?.value??''; data.fechaMes=$('#fecha-mes')?.value??''; data.fechaAnio=$('#fecha-anio')?.value??''; data.hora=$('#hora')?.value??''; data.objetivo=$('#objetivo')?.value??''; data.temas=$('#temas')?.value??''; data.cual=$('#cual')?.value??''; data.observaciones=$('#observaciones')?.value??''; data.lider=$('#lider-nombre')?.value??''; data.lider2=$('#lider2-nombre')?.value??''; data.logo=$('#logo-img')?.src??''; data.categorias={}; $$('.check[data-group="categorias"]').forEach(el=>{ data.categorias[el.dataset.id]=el.classList.contains('checked'); }); data.ambito={interno:false,externo:false}; $$('.check[data-group="ambito"]').forEach(el=>{ data.ambito[el.dataset.id]=el.classList.contains('checked'); }); data.participants=[]; $$('#tabla-asistentes tbody tr').forEach(tr=>{ const [n,nom,cc,cargo,firma]=tr.children; const inpNom=nom.querySelector('input'); const inpCC=cc.querySelector('input'); const sel=cargo.querySelector('select'); const img=firma.querySelector('img'); data.participants.push({name:inpNom?.value??'', cc:inpCC?.value??'', cargo:sel?.value??'', firma:img?.src??''}); }); data.firmaLider=$('#firma-lider')?.src??''; data.firmaLider2=$('#firma-lider2')?.src??''; data.leader2Enabled=($('#row-lider2').style.display!=='none'); return data; }
+function save(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot())); }catch(e){} }
+function restore(){ try{ const raw=localStorage.getItem(STORAGE_KEY); if(!raw){ updateFechaTexto(); return; } const data=JSON.parse(raw); if(data.meta){ setHeaderMeta(data.meta); } if(data.fechaDia) $('#fecha-dia').value=data.fechaDia; if(data.fechaMes) $('#fecha-mes').value=data.fechaMes; if(data.fechaAnio) $('#fecha-anio').value=data.fechaAnio; updateFechaTexto(); if(data.hora) $('#hora').value=data.hora; if(data.objetivo) $('#objetivo').value=data.objetivo; if(data.temas) $('#temas').value=data.temas; if(data.cual) $('#cual').value=data.cual; if(data.observaciones) $('#observaciones').value=data.observaciones; if(data.lider) $('#lider-nombre').value=data.lider; if(data.lider2) $('#lider2-nombre').value=data.lider2; if(data.logo) $('#logo-img').src=data.logo; if(data.categorias) Object.entries(data.categorias).forEach(([k,v])=>{ const el=document.querySelector(`.check[data-group="categorias"][data-id="${k}"]`); if(el) el.classList.toggle('checked', !!v); }); if(data.ambito){ ['interno','externo'].forEach(k=>{ const el=document.querySelector(`.check[data-group="ambito"][data-id="${k}"]`); if(el) el.classList.toggle('checked', !!data.ambito[k]); }); } if(Array.isArray(data.participants)){ $$('#tabla-asistentes tbody tr').forEach((tr,i)=>{ const p=data.participants[i]; if(!p) return; const [n,nom,cc,cargo,firma]=tr.children; const inpNom=nom.querySelector('input'); const inpCC=cc.querySelector('input'); const sel=cargo.querySelector('select'); const span=cargo.querySelector('.print-cargo'); const img=firma.querySelector('img'); if(inpNom) inpNom.value=p.name??''; if(inpCC) inpCC.value=p.cc??''; if(sel) sel.value=p.cargo??''; if(span) span.textContent=sel?.options[sel.selectedIndex]?.text??''; if(img) img.src=p.firma??''; }); } if(data.firmaLider) $('#firma-lider').src=data.firmaLider; if(data.firmaLider2) $('#firma-lider2').src=data.firmaLider2; showLeader2(!!data.leader2Enabled); } catch(e){} ensureSignatureControls(); syncSignButtons(); syncCual(); 
+setTimeout(() => {
+        ensureSignatureControls();
+        syncSignButtons();
+    }, 0);}
+function applyPrintStylesForPdf(on){ const body=document.body; if(on){ body.classList.add('pdf-export'); } else { body.classList.remove('pdf-export'); } }
+function suppressPlaceholdersForExport(){ const changed=[]; $$('#tabla-asistentes tbody tr').forEach(tr=>{ const nombre=tr.querySelector('td:nth-child(2) input'); const cc=tr.querySelector('td:nth-child(3) input'); [nombre,cc].forEach(inp=>{ if(!inp) return; if(!(inp.value??'').trim() && inp.placeholder){ changed.push({el:inp, ph: inp.placeholder}); inp.placeholder=''; } }); }); const ln1=$('#lider-nombre'); const ln2=$('#lider2-nombre'); [ln1,ln2].forEach(inp=>{ if(inp && !(inp.value??'').trim() && inp.placeholder){ changed.push({el:inp, ph: inp.placeholder}); inp.placeholder=''; } }); return function restore(){ changed.forEach(({el,ph})=>{ el.placeholder=ph; }); }; }
+const FLOW_URL='https://default36c3b64cd9e94c1abbac949738202e.07.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e039cf6792f4459aac6312ccf72271aa/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zaTdCHNaBL685bqgnA9mQcwzqrr_0P2e8JxZAF-IJBc';
+function sanitizeFilename(s){ return s.replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim(); }
+async function exportPdfBlob(){ applyPrintStylesForPdf(true); const restorePH=suppressPlaceholdersForExport(); try{ const worker=html2pdf().set({ margin:[10,8,10,8], image:{type:'jpeg',quality:0.95}, html2canvas:{scale:2,scrollX:0,scrollY:0,useCORS:true,letterRendering:true,backgroundColor:'#FFFFFF'}, jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}, pagebreak:{mode:['css']} }).from(document.querySelector('.page')).toPdf(); const pdf=await worker.get('pdf'); return pdf.output('blob'); } finally { restorePH(); applyPrintStylesForPdf(false); } }
+async function blobToBase64(b){ return new Promise(r=>{ let fr=new FileReader(); fr.onload=()=>r(fr.result.split(',')[1]); fr.readAsDataURL(b); }); }
+async function guardarEnSharePoint_viaFlow(){ const errs=validar(); if(errs.length){ alert('Corrija antes de guardar:'+errs.join('')); return; } let empresa=''; const logoFile=fileInput?.files?.[0]; if(logoFile){ const lname=(logoFile.name??'').toLowerCase(); if(lname.includes('empresa1')) empresa='EMPRESA1'; else if(lname.includes('empresa2')) empresa='EMPRESA2'; else if(lname.includes('empresa3')) empresa='EMPRESA3'; } const title=(document.querySelector('.title')?.textContent??'documento').trim(); const fd=$('#fecha-dia')?.value??''; const fm=$('#fecha-mes')?.value??''; const fa=$('#fecha-anio')?.value??''; const fechaSafe=`${fd}-${fm}-${fa}`; let horaTxt=($('#hora')?.value??'').trim(); const tz=(Intl.DateTimeFormat().resolvedOptions().timeZone??'America/Bogota'); const horaOk=isValidHour(horaTxt); if(!horaOk){ const d=new Intl.DateTimeFormat('es-CO',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:tz}).format(new Date()); horaTxt=d; } const horaSafe=horaTxt.replace(/:/g,'-').replace(/\s+/g,'').replace(/\.\sm\./gi,'m').toUpperCase(); let filename=`${title}`; if(empresa) filename+=` - ${empresa}`; filename+=` - ${fechaSafe} - ${horaSafe}.pdf`; filename=sanitizeFilename(filename); const blob=await exportPdfBlob(); try{ const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url); }catch(e){ console.warn('No se pudo descargar localmente:', e); } try{ const b64=await blobToBase64(blob); const res=await fetch(FLOW_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename,fileContentBase64:b64, empresa})}); if(!res.ok){ const text=await res.text().catch(()=>'' ); alert('Error al guardar en SharePoint: '+res.status+' '+text); } else { alert('Guardado en SharePoint: '+filename); } }catch(err){ alert('Error de red al guardar en SharePoint. Se descargó la copia local.'); } }
+document.addEventListener('DOMContentLoaded',()=>{ initFechaSelects(); updateFechaTexto(); restore(); const b=document.getElementById('btn-save'); if(b) b.onclick=guardarEnSharePoint_viaFlow; const clear=document.getElementById('btn-clear'); if(clear){ clear.onclick=()=>{ if(confirm('¿Seguro que desea borrar todos los datos del formulario?')){ clearAllAndBroadcast(); } } }
+ // PUBLICADOR tiempo real para "cual"
+ const cual=document.getElementById('cual'); if(cual){ cual.addEventListener('input', ()=>
+   window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path:'/meta/cual', value:cual.value}}))
+ ); 
+}});
+let __restorePH__=null; function beforePrintHandler(){ if(!__restorePH__){ __restorePH__=suppressPlaceholdersForExport(); } } function afterPrintHandler(){ if(__restorePH__){ __restorePH__(); __restorePH__=null; } } if('onbeforeprint' in window){ window.addEventListener('beforeprint', beforePrintHandler); window.addEventListener('afterprint', afterPrintHandler); } const mql=window.matchMedia && window.matchMedia('print'); if(mql && typeof mql.addEventListener==='function'){ mql.addEventListener('change',(e)=>{ if(e.matches) beforePrintHandler(); else afterPrintHandler(); }); }
+function clearAllAndBroadcast(){ const ids=['fecha-dia','fecha-mes','fecha-anio','hora','objetivo','temas','cual','observaciones','lider-nombre','lider2-nombre']; ids.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; }); updateFechaTexto(); $$('.check[data-group="categorias"]').forEach(el=>el.classList.remove('checked')); $$('.check[data-group="ambito"]').forEach(el=>el.classList.remove('checked')); syncCual(); $$('#tabla-asistentes tbody tr').forEach(tr=>{ const [n,tdNombre,tdCC,tdCargo,tdFirma]=tr.children; const iNom=tdNombre.querySelector('input'); if(iNom) iNom.value=''; const iCC=tdCC.querySelector('input'); if(iCC) iCC.value=''; const sel=tdCargo.querySelector('select'); if(sel){ sel.value=''; const span=tdCargo.querySelector('.print-cargo'); if(span) span.textContent=''; } const img=tdFirma.querySelector('img'); if(img) img.src=''; }); const fl1=$('#firma-lider'); if(fl1) fl1.src=''; const fl2=$('#firma-lider2'); if(fl2) fl2.src=''; showLeader2(false); if(logoImg) logoImg.src=''; syncSignButtons(); try{ localStorage.removeItem(STORAGE_KEY);}catch(e){} save(); const send=(path,value)=>window.dispatchEvent(new CustomEvent('ws-patch',{detail:{path,value}})); send('/meta/hora',''); send('/meta/objetivo',''); send('/meta/temas',''); send('/meta/cual',''); send('/meta/observaciones',''); send('/meta/cat_reunion', false); send('/meta/cat_capacitacion', false); send('/meta/cat_socializacion', false); send('/meta/cat_otro', false); send('/meta/amb_interno', false); send('/meta/amb_externo', false); send('/meta/logo',''); send('/meta/fecha_dia',''); send('/meta/fecha_mes',''); send('/meta/fecha_anio',''); send('/leaders/leader1/nombre',''); send('/leaders/leader1/firma',''); send('/leaders/leader2/nombre',''); send('/leaders/leader2/firma',''); send('/leader2Enabled', false); for(let i=1;i<=20;i++){ const k='row_'+String(i).padStart(2,'0'); send(`/participants/${k}/name`, ''); send(`/participants/${k}/cc`, ''); send(`/participants/${k}/cargo`, ''); send(`/participants/${k}/firma`, ''); } }
+/* ====== PIN admin: cancelar PIN también cierra el modal de firma si estaba visible ====== */
+const ADMIN_PIN= localStorage.getItem('acta_admin_pin');
+function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getElementById('pin-modal'); const input=document.getElementById('pin-input'); const error=document.getElementById('pin-error'); pm.style.display='flex'; input.value=''; error.style.display='none'; input.focus(); const onCancel=()=>{ cleanup(); const sig=document.getElementById('sig-modal'); if(sig) sig.style.display='none'; resolve(false); }; const onOk=()=>{ if(input.value===ADMIN_PIN){ cleanup(); resolve(true);} else { error.style.display='block'; } }; function cleanup(){ pm.style.display='none'; document.getElementById('pin-cancel').removeEventListener('click', onCancel); document.getElementById('pin-ok').removeEventListener('click', onOk); } document.getElementById('pin-cancel').addEventListener('click', onCancel); document.getElementById('pin-ok').addEventListener('click', onOk); }); }
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+/* ====== Sincronización y locks + wrapper de firma con PIN ====== */
+(function(){
+  const ACTA_ID = new URLSearchParams(location.search).get('acta') ?? 'acta-demo-01';
+  const CLIENT_ID=(crypto&&crypto.randomUUID)? crypto.randomUUID(): String(Math.random()).slice(2);
+
+  // WebSocket-only + reconexión rápida
+  const socket=io("http://192.168.1.85/acta",{
+    transports:["websocket"],
+    upgrade:false,
+    forceNew:true,
+    reconnection:true,
+    reconnectionAttempts:Infinity,
+    reconnectionDelay:400,
+    reconnectionDelayMax:1500,
+    timeout:8000
+  });
+  window.__actaSocket=socket; window.__ACTA_ID=ACTA_ID; window.__CLIENT_ID=CLIENT_ID;
+
+  socket.on('connect',()=>{
+    socket.emit('join',{actaId:ACTA_ID});
+    setTimeout(() => {
+    ensureSignatureControls();
+    syncSignButtons();
+    }, 0);
+  });
+  
+
+  // Reconectar al volver a foco/online
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible' && socket.disconnected){
+      socket.connect();
+      ensureSignatureControls();
+        syncSignButtons();
+    }
+  });
+  window.addEventListener('online',()=>{
+    if(socket.disconnected) socket.connect();
+  });
+
+  function applyValueToInput(sel,v){ const el=document.querySelector(sel); if(!el) return; if(el.value!==v) el.value=v; }
+  function setCheckedBySelector(sel,on){ const el=document.querySelector(sel); if(!el) return; el.classList.toggle('checked',!!on); }
+  function setSelectAndPrint(el,val){ if(!el) return; el.value=val??''; const span=el.parentElement?.querySelector('.print-cargo'); if(span) span.textContent=el.options[el.selectedIndex]?.text??''; }
+  function emitField(path,value){ socket.emit('patch',{actaId:ACTA_ID,path,value,clientId:CLIENT_ID}); }
+  function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+  const mute=new WeakSet(); const withMute=(el,fn)=>{ if(!el) return; mute.add(el); try{ fn(); } finally { setTimeout(()=> mute.delete(el),0); } };
+  window.addEventListener('ws-patch',(e)=>{ const {path,value}=e.detail??{}; if(path!=null) emitField(path,value); });
+
+  // snapshot
+  socket.on('snapshot',(data)=>{
+    try{
+      if(data.meta){
+        if(data.meta.fecha_dia?.value!=null) applyValueToInput('#fecha-dia', data.meta.fecha_dia.value);
+        if(data.meta.fecha_mes?.value!=null) applyValueToInput('#fecha-mes', data.meta.fecha_mes.value);
+        if(data.meta.fecha_anio?.value!=null) applyValueToInput('#fecha-anio', data.meta.fecha_anio.value);
+        updateFechaTexto();
+        if(data.meta.hora?.value!=null) applyValueToInput('#hora', data.meta.hora.value);
+        if(data.meta.objetivo?.value!=null) applyValueToInput('#objetivo', data.meta.objetivo.value);
+        if(data.meta.temas?.value!=null) applyValueToInput('#temas', data.meta.temas.value);
+        if(data.meta.cual?.value!=null) applyValueToInput('#cual', data.meta.cual.value);
+        if(data.meta.observaciones?.value!=null) applyValueToInput('#observaciones', data.meta.observaciones.value);
+        setCheckedBySelector('.check[data-group="categorias"][data-id="reunion"]', !!data.meta.cat_reunion?.value);
+        setCheckedBySelector('.check[data-group="categorias"][data-id="capacitacion"]', !!data.meta.cat_capacitacion?.value);
+        setCheckedBySelector('.check[data-group="categorias"][data-id="socializacion"]', !!data.meta.cat_socializacion?.value);
+        setCheckedBySelector('.check[data-group="categorias"][data-id="otro"]', !!data.meta.cat_otro?.value);
+        setCheckedBySelector('.check[data-group="ambito"][data-id="interno"]', !!data.meta.amb_interno?.value);
+        setCheckedBySelector('.check[data-group="ambito"][data-id="externo"]', !!data.meta.amb_externo?.value);
+        if (data.meta.codigo?.value != null) { const el=document.getElementById('meta-codigo'); if(el) el.textContent = data.meta.codigo.value; }
+        if (data.meta.version?.value != null) { const el=document.getElementById('meta-version'); if(el) el.textContent = data.meta.version.value; }
+        if (data.meta.fecha?.value != null) { const el=document.getElementById('meta-fecha'); if(el) el.textContent = data.meta.fecha.value; }
+        if (data.meta.logo?.value != null) { const li = document.getElementById('logo-img'); withMute(li, () => { li.src = (data.meta.logo.value ?? ''); }); }
+      }
+      if(data.leaders){
+        if(data.leaders.leader1?.nombre?.value!=null) applyValueToInput('#lider-nombre', data.leaders.leader1.nombre.value);
+        if(data.leaders.leader1?.firma?.value!=null) { const im=document.getElementById('firma-lider'); if(im) withMute(im, () => { im.src=(data.leaders.leader1.firma.value ?? ''); }); }
+        if(data.leaders.leader2?.nombre?.value!=null) applyValueToInput('#lider2-nombre', data.leaders.leader2.nombre.value);
+        if(data.leaders.leader2?.firma?.value!=null) { const im2=document.getElementById('firma-lider2'); if(im2) withMute(im2, () => { im2.src=(data.leaders.leader2.firma.value ?? ''); }); }
+      }
+      if(typeof data.leader2Enabled==='boolean'){ if(typeof showLeader2==='function') showLeader2(!!data.leader2Enabled); }
+      for(let i=1;i<=20;i++){
+        const key='row_'+String(i).padStart(2,'0');
+        const tr=document.querySelector('#tabla-asistentes tbody tr:nth-child('+i+')'); if(!tr) continue;
+        const inpNombre = tr.querySelector('td:nth-child(2) input');
+        const inpCC = tr.querySelector('td:nth-child(3) input');
+        const selCargo = tr.querySelector('td:nth-child(4) select');
+        const imgFirma = tr.querySelector('td:nth-child(5) img');
+        const pr = data.participants?.[key];
+        if(!pr) continue;
+        let p=null; if(pr.value){ p = pr.value; } else { p = { name: pr.name?.value, cc: pr.cc?.value, cargo: pr.cargo?.value, firma: pr.firma?.value }; }
+        if(p){
+          if(inpNombre && p.name != null) inpNombre.value=p.name;
+          if(inpCC && p.cc != null) inpCC.value=p.cc;
+          if(selCargo && p.cargo != null) setSelectAndPrint(selCargo, p.cargo);
+          if(imgFirma && (p.firma !== undefined)) withMute(imgFirma, () => { imgFirma.src=(p.firma ?? ''); });
+        }
+      }
+      syncSignButtons(); ensureSignatureControls(); syncSignButtons();
+    }catch(e){ console.error('snapshot error', e); }
+  });
+
+  // patch
+  socket.on('patch', ({ path, value, clientId })=>{
+    if(clientId===CLIENT_ID) return;
+    try{
+      if(path==='/meta/fecha_dia'){ applyValueToInput('#fecha-dia', value); updateFechaTexto(); return; }
+      if(path==='/meta/fecha_mes'){ applyValueToInput('#fecha-mes', value); updateFechaTexto(); return; }
+      if(path==='/meta/fecha_anio'){ applyValueToInput('#fecha-anio', value); updateFechaTexto(); return; }
+      if(path==='/meta/hora') return applyValueToInput('#hora', value);
+      if(path==='/meta/objetivo') return applyValueToInput('#objetivo', value);
+      if(path==='/meta/temas') return applyValueToInput('#temas', value);
+      if(path==='/meta/cual') return applyValueToInput('#cual', value);
+      if(path==='/meta/observaciones') return applyValueToInput('#observaciones', value);
+      if(path==='/meta/codigo'){ const el=document.getElementById('meta-codigo'); if(el) el.textContent = value??''; return; }
+      if(path==='/meta/version'){ const el=document.getElementById('meta-version'); if(el) el.textContent = value??''; return; }
+      if(path==='/meta/fecha'){ const el=document.getElementById('meta-fecha'); if(el) el.textContent = value??''; return; }
+      if(path==='/meta/cat_reunion') return setCheckedBySelector('.check[data-group="categorias"][data-id="reunion"]', !!value);
+      if(path==='/meta/cat_capacitacion') return setCheckedBySelector('.check[data-group="categorias"][data-id="capacitacion"]', !!value);
+      if(path==='/meta/cat_socializacion') return setCheckedBySelector('.check[data-group="categorias"][data-id="socializacion"]', !!value);
+      if(path==='/meta/cat_otro') return setCheckedBySelector('.check[data-group="categorias"][data-id="otro"]', !!value);
+      if(path==='/meta/amb_interno') return setCheckedBySelector('.check[data-group="ambito"][data-id="interno"]', !!value);
+      if(path==='/meta/amb_externo') return setCheckedBySelector('.check[data-group="ambito"][data-id="externo"]', !!value);
+      if(path==='/meta/logo'){ const li=document.getElementById('logo-img'); return withMute(li, () => { li.src = value ?? ''; }); }
+      if(path==='/leaders/leader1/nombre') return applyValueToInput('#lider-nombre', value);
+      if(path==='/leaders/leader1/firma'){ const im=document.getElementById('firma-lider'); if(im) { withMute(im, () => { im.src=value ?? ''; }); syncSignButtons(); ensureSignatureControls(); } return; }
+      if(path==='/leaders/leader2/nombre') return applyValueToInput('#lider2-nombre', value);
+      if(path==='/leaders/leader2/firma'){ const im=document.getElementById('firma-lider2'); if(im) { withMute(im, () => { im.src=value ?? ''; }); syncSignButtons(); ensureSignatureControls(); } return; }
+      if(path==='/leader2Enabled'){ if(typeof showLeader2==='function') showLeader2(!!value); return; }
+      let m=path.match(/^\/participants\/(row_\d{2})\/(name|cc|cargo|firma)$/);
+      if(m){
+        const idx=parseInt(m[1].slice(-2),10);
+        const field=m[2];
+        const tr=document.querySelector('#tabla-asistentes tbody tr:nth-child('+idx+')');
+        if(!tr) return;
+        if(field==='name'){ const el=tr.querySelector('td:nth-child(2) input'); if(el) el.value=value??''; }
+        if(field==='cc'){ const el=tr.querySelector('td:nth-child(3) input'); if(el) el.value=value??''; }
+        if(field==='cargo'){ const el=tr.querySelector('td:nth-child(4) select'); if(el) setSelectAndPrint(el, value??''); }
+        if(field==='firma'){ const el=tr.querySelector('td:nth-child(5) img'); if(el) { withMute(el, () => { el.src=value??''; }); syncSignButtons(); ensureSignatureControls(); } return; }
+        return;
+      }
+      m=path.match(/^\/participants\/(row_\d{2})$/);
+      if(m){
+        const idx=parseInt(m[1].slice(-2),10);
+        const tr=document.querySelector('#tabla-asistentes tbody tr:nth-child('+idx+')');
+        if(!tr) return;
+        const inpNombre = tr.querySelector('td:nth-child(2) input');
+        const inpCC = tr.querySelector('td:nth-child(3) input');
+        const selCargo = tr.querySelector('td:nth-child(4) select');
+        const imgFirma = tr.querySelector('td:nth-child(5) img');
+        const p=value??{};
+        if(inpNombre && p.name != null) inpNombre.value=p.name;
+        if(inpCC && p.cc != null) inpCC.value=p.cc;
+        if(selCargo && p.cargo != null) setSelectAndPrint(selCargo, p.cargo);
+        if(imgFirma && p.firma != null) withMute(imgFirma, () => { imgFirma.src=(p.firma ?? ''); });
+        syncSignButtons(); return;
+      }
+    }catch(e){ console.error('patch error', e); }
+  });
+
+  // publishers
+  const publishInput=(sel,path)=>{ const el=document.querySelector(sel); if(!el) return; el.addEventListener('input', debounce(()=> emitField(path, el.value),60)); };
+  publishInput('#hora','/meta/hora'); publishInput('#objetivo','/meta/objetivo'); publishInput('#temas','/meta/temas'); publishInput('#cual','/meta/cual'); publishInput('#observaciones','/meta/observaciones');
+
+  function wireCheck(group,id,path){ const el=document.querySelector(`.check[data-group="${group}"][data-id="${id}"]`); if(!el) return; el.addEventListener('click', ()=>{ const v=el.classList.contains('checked'); emitField(path, v); if(group==='categorias' && v){ ['reunion','capacitacion','socializacion','otro'].forEach(k=>{ if(k!==id){ const o=document.querySelector(`.check[data-group="categorias"][data-id="${k}"]`); if(o) o.classList.remove('checked'); } }); } }); }
+  wireCheck('categorias','reunion','/meta/cat_reunion'); wireCheck('categorias','capacitacion','/meta/cat_capacitacion'); wireCheck('categorias','socializacion','/meta/cat_socializacion'); wireCheck('categorias','otro','/meta/cat_otro'); wireCheck('ambito','interno','/meta/amb_interno'); wireCheck('ambito','externo','/meta/amb_externo');
+
+  const ln1=document.getElementById('lider-nombre'); ln1?.addEventListener('input', debounce(()=> emitField('/leaders/leader1/nombre', ln1.value),60));
+  const ln2=document.getElementById('lider2-nombre'); ln2?.addEventListener('input', debounce(()=> emitField('/leaders/leader2/nombre', ln2.value),60));
+  document.getElementById('btn-add-leader')?.addEventListener('click', ()=> emitField('/leader2Enabled', true));
+  document.getElementById('btn-remove-leader')?.addEventListener('click', ()=> emitField('/leader2Enabled', false));
+
+  for(let i=1;i<=20;i++){
+    const tr=document.querySelector('#tabla-asistentes tbody tr:nth-child('+i+')'); if(!tr) continue;
+    const k='row_'+String(i).padStart(2,'0');
+    const inpNombre = tr.querySelector('td:nth-child(2) input');
+    const inpCC = tr.querySelector('td:nth-child(3) input');
+    const selCargo = tr.querySelector('td:nth-child(4) select');
+    const imgFirma = tr.querySelector('td:nth-child(5) img');
+    inpNombre?.addEventListener('input', debounce(()=> emitField(`/participants/${k}/name`, inpNombre.value),60));
+    inpCC?.addEventListener('input', debounce(()=> emitField(`/participants/${k}/cc`, inpCC.value),60));
+    selCargo?.addEventListener('change', ()=> emitField(`/participants/${k}/cargo`, selCargo.value));
+    if(imgFirma){
+      const mo=new MutationObserver(()=>{ if(mute.has(imgFirma)) return; emitField(`/participants/${k}/firma`, imgFirma.src??''); });
+      mo.observe(imgFirma, {attributes:true, attributeFilter:['src']});
+    }
+  }
+
+  // ====== Locks wiring ======
+  const USER_LABEL='usuario-'+(CLIENT_ID??'anon').slice(0,6);
+  const locksOwned=new Set();
+  const lockState=new Map();
+  let lockTouchTimer=null;
+  function elementsForPath(path){
+    if(!path) return [];
+    if(path==='/meta/fecha_dia') return [document.getElementById('fecha-dia')];
+    if(path==='/meta/fecha_mes') return [document.getElementById('fecha-mes')];
+    if(path==='/meta/fecha_anio') return [document.getElementById('fecha-anio')];
+    if(path==='/meta/hora') return [document.getElementById('hora')];
+    if(path==='/meta/objetivo') return [document.getElementById('objetivo')];
+    if(path==='/meta/temas') return [document.getElementById('temas')];
+    if(path==='/meta/cual') return [document.getElementById('cual')];
+    if(path==='/meta/observaciones') return [document.getElementById('observaciones')];
+    if(path==='/leaders/leader1/nombre') return [document.getElementById('lider-nombre')];
+    if(path==='/leaders/leader2/nombre') return [document.getElementById('lider2-nombre')];
+    if(path==='/leaders/leader1/firma') return [document.getElementById('firma-lider'), document.querySelector('.btn-firmar[data-target="lider"]')];
+    if(path==='/leaders/leader2/firma') return [document.getElementById('firma-lider2'), document.querySelector('.btn-firmar[data-target="lider2"]')];
+    let m=path.match(/^\/participants\/(row_\d{2})\/(name|cc|cargo|firma)$/);
+    if(m){
+      const idx=parseInt(m[1].slice(-2),10);
+      const tr=document.querySelector('#tabla-asistentes tbody tr:nth-child('+idx+')');
+      if(!tr) return [];
+      if(m[2]==='name') return [tr.querySelector('td:nth-child(2) input')];
+      if(m[2]==='cc') return [tr.querySelector('td:nth-child(3) input')];
+      if(m[2]==='cargo') return [tr.querySelector('td:nth-child(4) select')];
+      if(m[2]==='firma') return [tr.querySelector('td:nth-child(5) img'), tr.querySelector('td:nth-child(5) button')];
+    }
+    return [];
+  }
+  function pathForEl(el){
+    if(!el) return null;
+    if(el.id==='fecha-dia') return '/meta/fecha_dia';
+    if(el.id==='fecha-mes') return '/meta/fecha_mes';
+    if(el.id==='fecha-anio') return '/meta/fecha_anio';
+    if(el.id==='hora') return '/meta/hora';
+    if(el.id==='objetivo') return '/meta/objetivo';
+    if(el.id==='temas') return '/meta/temas';
+    if(el.id==='cual') return '/meta/cual';
+    if(el.id==='observaciones') return '/meta/observaciones';
+    if(el.id==='lider-nombre') return '/leaders/leader1/nombre';
+    if(el.id==='lider2-nombre') return '/leaders/leader2/nombre';
+    const tr=el.closest('#tabla-asistentes tbody tr');
+    if(tr){
+      const idx=Array.from(tr.parentElement.children).indexOf(tr)+1;
+      const k='row_'+String(idx).padStart(2,'0');
+      if (el.matches('td:nth-child(2) input')) return `/participants/${k}/name`;
+      if (el.matches('td:nth-child(3) input')) return `/participants/${k}/cc`;
+      if (el.matches('td:nth-child(4) select')) return `/participants/${k}/cargo`;
+      if (el.matches('td:nth-child(5) img')) return `/participants/${k}/firma`;
+      if (el.matches('td:nth-child(5) button'))return `/participants/${k}/firma`;
+    }
+    if (el.id==='firma-lider'|| el.dataset?.target==='lider') return '/leaders/leader1/firma';
+    if (el.id==='firma-lider2'|| el.dataset?.target==='lider2') return '/leaders/leader2/firma';
+    return null;
+  }
+  function refreshUiLockFor(path){
+    const info=lockState.get(path);
+    const els=elementsForPath(path);
+    els.forEach(el=>{
+      if(!el) return;
+      const isOwner=info && info.ownerClientId===CLIENT_ID;
+      const takenByOther=info && info.ownerClientId && info.ownerClientId!==CLIENT_ID;
+      el.classList.toggle('editing-self',!!isOwner);
+      el.classList.toggle('editing-remote',!!takenByOther);
+      el.classList.toggle('locked-remote',!!takenByOther);
+      const isInput=el.matches('input, textarea, select');
+      const isButton=el.matches('button');
+      if(isInput) el.disabled=!!takenByOther;
+      if(isButton) el.disabled=!!takenByOther;
+      if(takenByOther){ el.title=`Editando: ${info.ownerName??'otro usuario'}`; }
+      else if(el.title && el.title.startsWith('Editando:')) el.title='';
+    });
+  }
+  function applyLockUpdate({path,ownerClientId,ownerName,expiresAt}){ if(!path) return; if(!ownerClientId){ lockState.delete(path);} else { lockState.set(path,{ownerClientId,ownerName,expiresAt:expiresAt??0}); } refreshUiLockFor(path); }
+  function requestLock(path){ return new Promise((resolve)=>{ if(!path){ resolve({ok:false,reason:'no-path'}); return; } const onceGranted=(payload)=>{ if(payload?.path===path){ socket.off('lock_denied', onceDenied); locksOwned.add(path); applyLockUpdate(payload); ensureTouchTimer(); resolve({ok:true}); } }; const onceDenied=(payload)=>{ if(payload?.path===path){ socket.off('lock_granted', onceGranted); resolve({ok:false,reason:'denied',by:payload.ownerName}); } }; socket.once('lock_granted', onceGranted); socket.once('lock_denied', onceDenied); socket.emit('lock_request',{actaId:ACTA_ID,path,clientId:CLIENT_ID,user:USER_LABEL}); }); }
+  function releaseLock(path){ if(!path) return; if(locksOwned.has(path)){ locksOwned.delete(path); socket.emit('lock_release',{actaId:ACTA_ID,path,clientId:CLIENT_ID}); } if(locksOwned.size===0 && lockTouchTimer){ clearInterval(lockTouchTimer); lockTouchTimer=null; } }
+  function ensureTouchTimer(){ if(lockTouchTimer) return; lockTouchTimer=setInterval(()=>{ locksOwned.forEach((p)=>{ socket.emit('lock_touch',{actaId:ACTA_ID,path:p,clientId:CLIENT_ID}); }); },4000); }
+  socket.on('lock_state',(all)=>{ try{ lockState.clear(); if(all && typeof all==='object'){ Object.entries(all).forEach(([p,info])=> lockState.set(p,info)); } lockState.forEach((_,p)=> refreshUiLockFor(p)); }catch(e){} }); socket.on('lock_update',(payload)=> applyLockUpdate(payload));
+
+  const typingBlinks=new Map(); function blinkTyping(path,byName){ const els=elementsForPath(path); els.forEach(el=>{ if(!el) return; if(!locksOwned.has(path)){ el.classList.add('editing-remote'); el.title=`Editando: ${byName??'otro usuario'}`; } }); const prev=typingBlinks.get(path); if(prev) clearTimeout(prev); typingBlinks.set(path, setTimeout(()=>{ const info=lockState.get(path); if(!info || info.ownerClientId===CLIENT_ID){ elementsForPath(path).forEach(el=>{ el?.classList.remove('editing-remote'); if(el?.title && el.title.startsWith('Editando:')) el.title=''; }); } typingBlinks.delete(path); },1200)); }
+  socket.on('typing',({path,user})=>{ if(path) blinkTyping(path,user); });
+
+  function wireLockForEl(el){
+    const path=pathForEl(el); if(!path) return;
+    el.addEventListener('focus', async ()=>{
+      const info=lockState.get(path);
+      if(info && info.ownerClientId && info.ownerClientId!==CLIENT_ID){ el.blur(); return; }
+      const res=await requestLock(path);
+      if(!res.ok){ alert(`Este campo está siendo editado por ${res.by??'otro usuario'}.`); el.blur(); }
+    }, {capture:true});
+    el.addEventListener('blur', ()=>{ releaseLock(path); el.classList.remove('editing-self'); });
+    el.addEventListener('input', (function(){ let t; return ()=>{ clearTimeout(t); t=setTimeout(()=> socket.emit('typing',{actaId:ACTA_ID,path,clientId:CLIENT_ID,user:USER_LABEL}),250); }; })());
+  }
+  function wireAllEditable(){
+    document.querySelectorAll('#fecha-dia, #fecha-mes, #fecha-anio, #hora, #objetivo, #temas, #cual, #observaciones, #lider-nombre, #lider2-nombre').forEach(wireLockForEl);
+    document.querySelectorAll('#tabla-asistentes tbody tr').forEach((tr)=>{
+      const nombre=tr.querySelector('td:nth-child(2) input');
+      const cc=tr.querySelector('td:nth-child(3) input');
+      const cargo=tr.querySelector('td:nth-child(4) select');
+      const img=tr.querySelector('td:nth-child(5) img');
+      const btn=tr.querySelector('td:nth-child(5) button');
+      [nombre,cc,cargo,img,btn].forEach(el=> el && wireLockForEl(el));
+    });
+    const img1=document.getElementById('firma-lider');
+    const btn1=document.querySelector('.btn-firmar[data-target="lider"]');
+    const img2=document.getElementById('firma-lider2');
+    const btn2=document.querySelector('.btn-firmar[data-target="lider2"]');
+    [img1,btn1,img2,btn2].forEach(el=> el && wireLockForEl(el));
+  }
+
+  // ====== Wrapper de firma con PIN + lock ======
+  if(typeof window.openSignature==='function'){
+    const originalOpenSignature=window.openSignature;
+    window.openSignature=async function(e){
+      const targetId=e?.currentTarget?.dataset?.target; let path=null; let imgEl=null;
+      if(targetId==='lider'){ path='/leaders/leader1/firma'; imgEl=document.getElementById('firma-lider'); }
+      else if(targetId==='lider2'){ path='/leaders/leader2/firma'; imgEl=document.getElementById('firma-lider2'); }
+      else if(targetId && targetId.startsWith('p-')){ const idx=targetId.split('-')[1]; const k='row_'+String(idx).padStart(2,'0'); path=`/participants/${k}/firma`; imgEl=document.getElementById(`firma-${idx}`); }
+      const hasSignature = imgEl && !isImgEmpty(imgEl);
+      if(hasSignature){
+        const ok=await requestAdminPin(); if(!ok){ const sig=document.getElementById('sig-modal'); if(sig) sig.style.display='none'; return; }
+      }
+      if(path){ const res=await requestLock(path); if(!res.ok){ alert(`La firma está siendo editada por ${res.by??'otro usuario'}.`); return; } }
+      originalOpenSignature(e);
+      const btnCancel=document.getElementById('sig-cancel'); const btnSave=document.getElementById('sig-save'); const btnDelete=document.getElementById('sig-delete');
+      const release=()=>{ if(path) releaseLock(path); btnCancel?.removeEventListener('click',release); btnSave?.removeEventListener('click',release); btnDelete?.removeEventListener('click',release); };
+      btnCancel?.addEventListener('click',release); btnSave?.addEventListener('click',release); btnDelete?.addEventListener('click',release);
+    }
+  }
+  document.addEventListener('DOMContentLoaded', wireAllEditable);
+})();
+</script>
+<script>
+/* Parche v2: Solo selector de empresa + oculta el cargador de logo
+   *** Modificado para: ***
+   - Abrir siempre en "Seleccionar…" y logo vacío.
+   - Si vuelves a "Seleccionar…", limpia el logo y publica WS.
+*/
+(function(){
+  const LS_EMP = 'acta_config_empresas'; // compatibilidad (no prioritario)
+  const LS_FORM = 'registroAsistencia_v13_logoMeta';
+  function $(sel, ctx=document){ return ctx.querySelector(sel); }
+  const $$ = (sel, ctx=document)=> Array.from(ctx.querySelectorAll(sel));
+  // Resolver API base (?api=...)
+  const API_BASE = new URLSearchParams(location.search).get('api') ?? 'http://192.168.1.85:3000';
+  const API_CONFIG_URL = API_BASE.replace(/\/+$/,'') + '/api/config';
+
+  function ensureEmpresaPicker(){
+    const logoCell = document.querySelector('.head .logo');
+    if(!logoCell || logoCell.querySelector('.empresa-picker')) return;
+    logoCell.style.position = 'relative';
+    // quitar uploader original
+    const uploader = document.querySelector('.logo-uploader');
+    if(uploader) uploader.remove();
+    const box = document.createElement('div');
+    box.className = 'empresa-picker';
+    box.style.position = 'absolute';
+    box.style.left = '4px';
+    box.style.top = '4px';
+    box.style.background = '#ffffffcc';
+    box.style.border = '1px solid #cbd5e1';
+    box.style.padding = '4px 6px';
+    box.style.borderRadius = '8px';
+    box.style.fontSize = '11px';
+    box.style.display = 'flex';
+    box.style.alignItems = 'center';
+    box.style.gap = '6px';
+    box.innerHTML = '<span>Empresa:</span> <select id="empresa-select"></select>';
+    logoCell.appendChild(box);
+    // Ocultar en impresión y PDF export
+    const style = document.createElement('style');
+    style.textContent = '@media print{ .empresa-picker{ display:none !important; } } .pdf-export .empresa-picker{ display:none !important; }';
+    document.head.appendChild(style);
+  }
+
+  function loadEmpresas(){
+    try{ return JSON.parse(localStorage.getItem(LS_EMP)??'{}')??{}; }catch(e){ return {}; }
+  }
+
+  async function fetchConfigFromServer(){
+    const r = await fetch(API_CONFIG_URL, { method:'GET', cache:'no-store', headers:{'Accept':'application/json'} });
+    if(!r.ok) throw new Error('GET /api/config falló: ' + r.status);
+    const cfg = await r.json();
+    const empresas = (cfg && cfg.empresas && typeof cfg.empresas==='object') ? cfg.empresas : {};
+    const cargos = Array.isArray(cfg?.cargos) ? cfg.cargos : [];
+    return { empresas, cargos };
+  }
+
+  function normalizeCargos(list){
+    const norm = s => String(s ?? '').trim().toUpperCase();
+    const seen = new Set(); const out = [];
+    for(const c of (list ?? [])){
+      const n = norm(c);
+      if(n && !seen.has(n)){ seen.add(n); out.push(n); }
+    }
+    out.sort((a,b)=> a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    return out;
+  }
+
+  async function populateEmpresaSelect(){
+    ensureEmpresaPicker();
+    const sel = $('#empresa-select'); if(!sel) return;
+    let empresas = {};
+    try{
+      const cfg = await fetchConfigFromServer();
+      empresas = cfg.empresas ?? {};
+      window.__acta_cargos_servidor__ = normalizeCargos(cfg.cargos ?? []);
+      window.__acta_empresas_cache__ = empresas;
+    }catch(err){
+      empresas = loadEmpresas();
+      window.__acta_cargos_servidor__ = normalizeCargos([]);
+      console.warn('[Empresas] usando LocalStorage por fallback:', err);
+    }
+    const keys = Object.keys(empresas);
+    sel.innerHTML = '<option value="">Seleccionar…</option>' + keys.map(k=>`<option value="${k}">${empresas[k]?.displayName??k}</option>`).join('');
+    // *** Cambio: SIEMPRE arrancar en "Seleccionar…" (sin restaurar LS) ***
+    sel.value = '';
+  }
+
+  function applyEmpresa(key){
+    if(!key) return;
+    let empresas = {};
+    try{ empresas = (window.__acta_empresas_cache__) ?? {}; }catch{}
+    if(!empresas || !Object.keys(empresas).length){ empresas = loadEmpresas(); }
+    if(!Object.keys(empresas).length){
+      fetchConfigFromServer().then(cfg=>{
+        window.__acta_empresas_cache__ = cfg.empresas ?? {};
+      }).catch(()=>{});
+    }
+    const e = empresas[key]; if(!e) return;
+    const li = $('#logo-img'); if(li) li.src = e.logo??'';
+    const c = $('#meta-codigo'); if(c) c.textContent = e.codigo??'';
+    const v = $('#meta-version'); if(v) v.textContent = e.version??'';
+    const f = $('#meta-fecha'); if(f) f.textContent = e.fecha??'';
+    try{
+      const raw = localStorage.getItem(LS_FORM);
+      const data = raw? JSON.parse(raw):{}; data.meta = data.meta??{};
+      data.meta.empresaKey = key; data.logo = e.logo??'';
+      localStorage.setItem(LS_FORM, JSON.stringify(data));
+    }catch(err){}
+    try{
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/codigo', value: e.codigo??'' } }));
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/version', value: e.version??'' } }));
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/fecha', value: e.fecha??'' } }));
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/logo', value: e.logo??'' } }));
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/empresaKey', value: key } }));
+    }catch(err){}
+  }
+
+  // *** NUEVO: limpiar logo y publicar WS (y memoria local) ***
+  function clearLogoAndBroadcast() {
+    try {
+      const li = document.getElementById('logo-img');
+      if (li) li.src = '';
+
+      try {
+        const raw = localStorage.getItem(LS_FORM);
+        const data = raw ? JSON.parse(raw) : {};
+        data.logo = '';
+        if (!data.meta) data.meta = {};
+        data.meta.empresaKey = '';
+        localStorage.setItem(LS_FORM, JSON.stringify(data));
+      } catch (_) {}
+
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/logo', value: '' } }));
+      window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: '/meta/empresaKey', value: '' } }));
+    } catch (e) {
+      console.warn('[Empresa] clearLogoAndBroadcast error:', e);
+    }
+  }
+
+  function applyCargosFromServerToTable(){
+    const cargos = Array.isArray(window.__acta_cargos_servidor__) ? window.__acta_cargos_servidor__ : [];
+    const rows = $$('#tabla-asistentes tbody tr');
+    rows.forEach((tr) => {
+      const tdCargo = tr.children && tr.children[3];
+      if(!tdCargo) return;
+      const sel = tdCargo.querySelector('select.cargo') ?? tdCargo.querySelector('select');
+      if(!sel) return;
+      const prev = String(sel.value ?? '').trim().toUpperCase();
+      sel.innerHTML = '';
+      const optEmpty = document.createElement('option'); optEmpty.value = ''; optEmpty.textContent = '';
+      sel.appendChild(optEmpty);
+      cargos.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+      if(prev && cargos.includes(prev)){ sel.value = prev; } else { sel.value = ''; }
+      const spanPrint = tdCargo.querySelector('.print-cargo');
+      if(spanPrint){ spanPrint.textContent = sel.options[sel.selectedIndex]?.text ?? ''; }
+      if(!sel.__ws_patched__){
+        sel.addEventListener('change', ()=>{
+          const sp = tdCargo.querySelector('.print-cargo');
+          if(sp) sp.textContent = sel.options[sel.selectedIndex]?.text ?? '';
+          try{
+            const idx = Array.from(tr.parentElement.children).indexOf(tr) + 1;
+            const k = 'row_' + String(idx).padStart(2,'0');
+            window.dispatchEvent(new CustomEvent('ws-patch', { detail: { path: `/participants/${k}/cargo`, value: sel.value } }));
+          }catch{}
+          try{ if(typeof window.save === 'function') window.save(); }catch{}
+        });
+        sel.__ws_patched__ = true;
+      }
+    });
+  }
+
+  async function refreshServerDataAndApply(){
+    try{
+      const cfg = await fetchConfigFromServer();
+      window.__acta_empresas_cache__ = cfg.empresas ?? {};
+      window.__acta_cargos_servidor__ = normalizeCargos(cfg.cargos ?? []);
+    }catch(err){
+      console.warn('[Config] No se pudo leer servidor, se mantiene estado previo/local:', err);
+    }
+    applyCargosFromServerToTable();
+    const sel = $('#empresa-select');
+    if(sel && sel.value){
+      applyEmpresa(sel.value);
+    }
+  }
+
+  async function init(){
+    ensureEmpresaPicker();
+    await populateEmpresaSelect();
+    await refreshServerDataAndApply();
+
+    const sel = document.getElementById('empresa-select');
+    if (sel) {
+      // Estado por defecto: "Seleccionar…" + limpiar logo
+      sel.value = '';
+      clearLogoAndBroadcast();
+
+      sel.addEventListener('change', () => {
+        const v = sel.value;
+        if (!v) {
+          clearLogoAndBroadcast();
+        } else {
+          applyEmpresa(v);
+          refreshServerDataAndApply();
+        }
+      });
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

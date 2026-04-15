@@ -1,0 +1,31 @@
+{
+  "empresas": {
+    "EMPRESA1": {
+      "displayName": "Empresa SAS",
+      "codigo": "SGI-FO-01",
+      "version": "1",
+      "fecha": "12/11/2025",
+      "logo": "file:///C:/xampp/htdocs/firmas2/admin_config.html"
+    },
+    "EMPRESA2": {
+      "displayName": "Empresa Enterprise",
+      "codigo": "SGI-FO-02",
+      "version": "2",
+      "fecha": "26/02/2024",
+      "logo": ""
+    },
+    "EMPRESA3": {
+      "displayName": "Empresa S.A",
+      "codigo": "SGI-FO-03",
+      "version": "3",
+      "fecha": "15/11/2025",
+      "logo": ""
+    }
+  },
+  "cargos": [
+    "CARGO1",
+    "CARGO2",
+    "CARGO3",
+    "OTRO"
+  ]
+}
