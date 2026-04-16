@@ -28,7 +28,15 @@ app.use(express.json({ limit: '10mb' }));
 // Estado por acta
 const stateByActa = new Map(); // actaId -> state tree
 const locksByActa = new Map(); // actaId -> Map(path -> info)
-const LOCK_TTL_MS = 20000;
+const LOCK_TTL_MS = 15000;
+
+setInterval(() => {
+  for (const map of locksByActa.values()) {
+    for (const [p,info] of map) {
+      if (isExpired(info)) map.delete(p);
+    }
+  }
+}, 5000);
 
 function getActaState(actaId){ if(!stateByActa.has(actaId)) stateByActa.set(actaId, {}); return stateByActa.get(actaId); }
 function getActaLocks(actaId){ if(!locksByActa.has(actaId)) locksByActa.set(actaId, new Map()); return locksByActa.get(actaId); }
