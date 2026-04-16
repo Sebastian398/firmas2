@@ -66,10 +66,11 @@
     .error{color:#dc2626; font-weight:600; min-height:18px}
     /* QRs grid - MONOGRAMAS FIJOS CON COLORES */
     .qrs{display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px}
-    .qr-card{background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:12px; text-align:center}
+    .qr-card{background:#fff; border:1px solid var(--gray-200); border-radius:12px; padding:12px; text-align:center;}
     .qr-container{
       position:relative;
-      width:220px;
+      width:100%;
+      max-width: 220px;
       height:220px;
       margin:0 auto;
       border-radius:8px;
@@ -83,6 +84,13 @@
       position:absolute;
       top:0;
       left:0;
+    }
+    .qr-card a{
+      display: block;
+      max-width: 100%;
+      font-size: 13px;
+      word-break: break-word;
+      overflow-wrap: anywhere;
     }
     .monograma{
       position:absolute;
@@ -131,6 +139,27 @@
     .alert-box p{margin:0 0 10px 0; color:#475569}
     .alert-actions{display:flex; gap:10px; justify-content:flex-end}
     .alert-actions button{background:#0ea5a4; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer}
+ @media (max-width: 600px) {
+
+  .sidebar{
+    position: relative;
+    height: auto;
+  }
+
+  .qrs{
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .qr-card{
+    padding: 10px;
+  }
+
+  .qr-container{
+    max-width: 180px;
+  }
+}
+ 
   </style>
 </head>
 <body>
