@@ -685,17 +685,12 @@ function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getE
 })();
 </script>
 <script>
-/* Parche v2: Solo selector de empresa + oculta el cargador de logo
-   *** Modificado para: ***
-   - Abrir siempre en "Seleccionar…" y logo vacío.
-   - Si vuelves a "Seleccionar…", limpia el logo y publica WS.
-*/
 (function(){
-  const LS_EMP = 'acta_config_empresas'; // compatibilidad (no prioritario)
+  const LS_EMP = 'acta_config_empresas'; // compatibilidad
   const LS_FORM = 'registroAsistencia_v13_logoMeta';
   function $(sel, ctx=document){ return ctx.querySelector(sel); }
   const $$ = (sel, ctx=document)=> Array.from(ctx.querySelectorAll(sel));
-  // Resolver API base (?api=...)
+  // Resolver API base
   const API_BASE = new URLSearchParams(location.search).get('api') ?? 'http://192.168.1.85:3000';
   const API_CONFIG_URL = API_BASE.replace(/\/+$/,'') + '/api/config';
 
@@ -703,9 +698,6 @@ function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getE
     const logoCell = document.querySelector('.head .logo');
     if(!logoCell || logoCell.querySelector('.empresa-picker')) return;
     logoCell.style.position = 'relative';
-    // quitar uploader original
-    const uploader = document.querySelector('.logo-uploader');
-    if(uploader) uploader.remove();
     const box = document.createElement('div');
     box.className = 'empresa-picker';
     box.style.position = 'absolute';
@@ -767,7 +759,6 @@ function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getE
     }
     const keys = Object.keys(empresas);
     sel.innerHTML = '<option value="">Seleccionar…</option>' + keys.map(k=>`<option value="${k}">${empresas[k]?.displayName??k}</option>`).join('');
-    // *** Cambio: SIEMPRE arrancar en "Seleccionar…" (sin restaurar LS) ***
     sel.value = '';
   }
 
@@ -801,7 +792,7 @@ function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getE
     }catch(err){}
   }
 
-  // *** NUEVO: limpiar logo y publicar WS (y memoria local) ***
+  // limpiar logo y publicar WS
   function clearLogoAndBroadcast() {
     try {
       const li = document.getElementById('logo-img');
@@ -895,6 +886,54 @@ function requestAdminPin(){ return new Promise(resolve=>{ const pm=document.getE
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 })();
+
+function autoResizeTextarea(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function initAutoResizeTextareas() {
+  const ids = ['objetivo', 'temas', 'observaciones'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // Al escribir
+    el.addEventListener('input', () => autoResizeTextarea(el));
+
+    // Al cargar datos (restore / websocket)
+    setTimeout(() => autoResizeTextarea(el), 50);
+  });
+}
+function prepareTextareasForPdf() {
+  const ids = ['objetivo', 'temas', 'observaciones'];
+  const restored = [];
+
+  ids.forEach(id => {
+    const ta = document.getElementById(id);
+    if (!ta) return;
+
+    const text = ta.value?.trim();
+    if (!text) return;
+
+    const div = document.createElement('div');
+    div.className = 'pdf-text';
+    div.textContent = text;
+
+    // reemplazo del nodo
+    ta.parentNode.replaceChild(div, ta);
+
+    restored.push({ parent: div.parentNode, ta, div });
+  });
+
+  // restaurar después del PDF
+  return () => {
+    restored.forEach(({ parent, ta, div }) => {
+      parent.replaceChild(ta, div);
+    });
+  };
+}
 </script>
 </body>
 </html>
