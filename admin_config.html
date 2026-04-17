@@ -512,14 +512,9 @@
       $('#btn-publicar-todo').addEventListener('click', ()=>{ saveAll(); });
     }
 
-    function bindQRs(){
-      const b = document.getElementById('btn-regenerar-qrs');
-      if(b) b.addEventListener('click', generarQRs);
-    }
-
     async function initApp(){
       await loadFromServer();
-      bindNav(); bindBackup(); bindEmpresaDetail(); bindCargosUI(); bindQRs();
+      bindNav(); bindBackup(); bindEmpresaDetail(); bindCargosUI();
       if(Object.keys(empresas).length===0){
         empresas = {
           'EMPRESA1': {displayName:'Empresa SAS', codigo:'EJE-FO-01', version:'1', fecha:'26/02/2024', logo:''},
